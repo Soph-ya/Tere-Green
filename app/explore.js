@@ -61,8 +61,10 @@ export default function Explore() {
             const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
             if (userDoc.exists()) {
                 setUserRole(userDoc.data().role);
+                console.log("✅ Role do usuário:", userDoc.data().role);
             } else {
                 setUserRole("user");
+                console.log("❌ Documento do usuário não encontrado");
             }
             
             await fetchTrilhas();
@@ -128,30 +130,24 @@ export default function Explore() {
     };
 
     const handleDeleteTrilha = async (id) => {
-        if (userRole !== "admin") return;
-
-        Alert.alert(
-            "Confirmar Exclusão",
-            "Tem certeza que deseja excluir esta trilha?",
-            [
-                { text: "Cancelar", style: "cancel" },
-                { 
-                    text: "Excluir", 
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            await deleteDoc(doc(db, "trilhas", id));
-                            await fetchTrilhas();
-                            resetForm();
-                            Alert.alert("Sucesso", "Trilha excluída com sucesso!");
-                        } catch (err) {
-                            console.error("Erro ao excluir trilha:", err);
-                            Alert.alert("Erro", "Não foi possível excluir a trilha.");
-                        }
-                    }
-                }
-            ]
-        );
+        if (userRole !== "admin") {
+            console.log("❌ Usuário não é admin, role:", userRole);
+            return;
+        }
+    
+        try {
+            const docRef = doc(db, "trilhas", id);
+            await deleteDoc(docRef);
+            await fetchTrilhas();
+            resetForm();
+            Alert.alert("Sucesso", "Trilha excluída com sucesso!");
+            
+        } catch (err) {
+            console.error("❌ ERRO CAPTURADO:", err);
+            console.error("Código:", err?.code);
+            console.error("Mensagem:", err?.message);
+            Alert.alert("Erro", "Falha: " + err.message);
+        }
     };
 
     const handleAgendarTrilha = async (trilhaId) => {
@@ -416,12 +412,21 @@ export default function Explore() {
                                 </View>
                                 <View style={styles.actionButtons}>
                                     {userRole === "admin" ? (
-                                        <TouchableOpacity
-                                            style={styles.editButton}
-                                            onPress={() => setModalMode("edit")}
-                                        >
-                                            <Text style={styles.editButtonText}>✏️ Editar Trilha</Text>
-                                        </TouchableOpacity>
+                                        <>
+                                            <TouchableOpacity
+                                                style={styles.editButton}
+                                                onPress={() => setModalMode("edit")}
+                                            >
+                                                <Text style={styles.editButtonText}>✏️ Editar Trilha</Text>
+                                            </TouchableOpacity>
+                                            {/* BOTÃO DE EXCLUSÃO ADICIONADO NO MODO DE VISUALIZAÇÃO */}
+                                            <TouchableOpacity
+                                                style={styles.deleteButton}
+                                                onPress={() => handleDeleteTrilha(selectedTrilha.id)}
+                                            >
+                                                <Text style={styles.deleteButtonText}>🗑️ Excluir Trilha</Text>
+                                            </TouchableOpacity>
+                                        </>
                                     ) : (
                                         <TouchableOpacity
                                             style={[styles.scheduleButton, agendando && styles.disabledButton]}
@@ -448,6 +453,7 @@ export default function Explore() {
     );
 }
 
+// Os styles permanecem os mesmos...
 const styles = StyleSheet.create({
     container: { 
         flex: 1, 
